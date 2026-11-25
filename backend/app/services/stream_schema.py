@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.services.base import BaseModuleService
+from app.services.partition_field_status import build_backfill_todo
 from app.store import store
 
 
@@ -37,4 +38,26 @@ class StreamSchemaService(BaseModuleService):
             "fields_before": fields_before,
             "fields_after": fields_after,
             "evolved_version": entry.get("生效版本", 2),
+        }
+
+    def domain_backfill_todo(self, entry_id: int) -> dict[str, Any]:
+        """Schema 回填待办：按分区字段生效状态数据汇总该变更每个分区的字段生效状态。
+
+        值班员据此区分已生效、待回填、仍按旧版本读取的分区；
+        缺来源的分区在缺失说明里写明缺哪份来源，没有回填依据就不能声称新列可用。
+        """
+        entry = store.find(self.MODULE, entry_id)
+        if not entry:
+            return {"ok": False, "message": f"Schema变更 {entry_id} 不存在"}
+        table = entry.get("目标湖表")
+        field = entry.get("变更字段")
+        version = str(entry.get("生效版本") or "")
+        todo = build_backfill_todo(table, field, version)
+        return {
+            "ok": True,
+            "change_id": entry.get("变更标识"),
+            "table": table,
+            "field": field,
+            "target_version": version,
+            **todo,
         }

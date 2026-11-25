@@ -56,6 +56,8 @@ npm run dev
 | 提交版本 | `delta_commit` | 版本提交 | 提交标识、目标湖表、提交类型 |
 | 分区合并 | `partition_merge` | 合并任务 | 任务标识、目标湖表、源分区 |
 | 流Schema演进 | `stream_schema` | Schema变更 | 变更标识、目标湖表、变更类型 |
+| 分区字段生效状态 | `partition_field_status` | 分区字段生效状态 | 状态标识、目标湖表、分区 |
+| 字段版本转换 | `field_version_conversion` | 字段版本转换 | 转换标识、目标湖表、变更字段 |
 | 快照管理 | `snapshot_mgr` | 表快照 | 快照标识、目标湖表、快照时间 |
 | 流质量校验 | `stream_quality` | 质量检查 | 检查标识、目标管道、校验字段 |
 | 历史清理 | `vacuum_job` | 清理作业 | 作业标识、目标湖表、保留版本 |
@@ -76,6 +78,23 @@ npm run dev
   `frontend/src/domain/<模块>.ts`，用于承载真实业务差异并维持36题位容量。
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
+
+## Schema 变更按分区核定
+
+Schema 变更（如 orders 增加 tax_code 到 v2）按分区核定字段演进：
+
+- `partition_field_status`（分区字段生效状态数据）是生效范围的登记处：
+  表查询依据它识别每个分区实际可用的字段，值班员可区分已生效、待回填、
+  仍按旧版本读取和已中断的分区。
+- `field_version_conversion`（字段版本转换数据）登记字段在版本间的转换规则，
+  覆盖分区由分区字段生效状态核算。
+- 数据回填（`backfill_pipeline`）执行时写入分区字段生效状态；没有回填依据
+  （来源）的分区不能声称新列可用，回填待办会说明缺哪份来源。
+- 并发补交同一分区只生效一次；回填中断后不得把半完成字段列为可用；
+  按旧版本查询仍返回原字段。
+- 表详情 `GET /api/lake_table/{id}/partition-fields?version=v2` 与
+  Schema 回填待办 `GET /api/stream_schema/{id}/backfill-todo` 同源出数，
+  刷新两处看到的状态一致。
 
 领域：数据工程
 子方向：数仓与数据湖

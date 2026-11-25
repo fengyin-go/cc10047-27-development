@@ -21,6 +21,8 @@ from app.services.iceberg_migrate import IcebergMigrateService
 from app.services.table_catalog import TableCatalogService
 from app.services.lake_audit import LakeAuditService
 from app.services.stream_checkpoint import StreamCheckpointService
+from app.services.partition_field_status import PartitionFieldStatusService
+from app.services.field_version_conversion import FieldVersionConversionService
 
 SERVICES: dict[str, BaseModuleService] = {
     "stream_source": StreamSourceService(),
@@ -42,6 +44,8 @@ SERVICES: dict[str, BaseModuleService] = {
     "table_catalog": TableCatalogService(),
     "lake_audit": LakeAuditService(),
     "stream_checkpoint": StreamCheckpointService(),
+    "partition_field_status": PartitionFieldStatusService(),
+    "field_version_conversion": FieldVersionConversionService(),
 }
 
 
